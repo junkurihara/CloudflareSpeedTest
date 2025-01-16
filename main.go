@@ -21,90 +21,90 @@ func init() {
 	var printVersion bool
 	var help = `
 CloudflareSpeedTest ` + version + `
-测试 Cloudflare CDN 所有 IP 的延迟和速度，获取最快 IP (IPv4+IPv6)！
+Test the latency and speed of all Cloudflare CDN IPs to find the fastest IPs (IPv4+IPv6)!
 https://github.com/XIU2/CloudflareSpeedTest
 
-参数：
+Parameters:
     -n 200
-        延迟测速线程；越多延迟测速越快，性能弱的设备 (如路由器) 请勿太高；(默认 200 最多 1000)
+        Latency testing threads; the higher the number, the faster the latency test. Do not set too high on low-performance devices (e.g., routers); (default 200, max 1000)
     -t 4
-        延迟测速次数；单个 IP 延迟测速的次数；(默认 4 次)
+        Number of latency tests; number of latency tests per IP; (default 4)
     -dn 10
-        下载测速数量；延迟测速并排序后，从最低延迟起下载测速的数量；(默认 10 个)
+        Number of download tests; after latency testing and sorting, download testing starts with the lowest latency IPs; (default 10)
     -dt 10
-        下载测速时间；单个 IP 下载测速最长时间，不能太短；(默认 10 秒)
+        Download test duration; maximum download test time per IP, should not be too short; (default 10 seconds)
     -tp 443
-        指定测速端口；延迟测速/下载测速时使用的端口；(默认 443 端口)
+        Specify test port; used for latency/download testing; (default port 443)
     -url https://cf.xiu2.xyz/url
-        指定测速地址；延迟测速(HTTPing)/下载测速时使用的地址，默认地址不保证可用性，建议自建；
+        Specify test URL; used for latency (HTTPing)/download testing. The default URL is not guaranteed to be available; it's recommended to set up your own;
 
     -httping
-        切换测速模式；延迟测速模式改为 HTTP 协议，所用测试地址为 [-url] 参数；(默认 TCPing)
+        Switch test mode; change latency test mode to HTTP protocol. The test URL is specified by the [-url] parameter; (default TCPing)
     -httping-code 200
-        有效状态代码；HTTPing 延迟测速时网页返回的有效 HTTP 状态码，仅限一个；(默认 200 301 302)
+        Valid status code; valid HTTP status code for HTTPing latency testing, only one allowed; (default 200, 301, 302)
     -cfcolo HKG,KHH,NRT,LAX,SEA,SJC,FRA,MAD
-        匹配指定地区；地区名为当地机场三字码，英文逗号分隔，仅 HTTPing 模式可用；(默认 所有地区)
+        Match specific regions; region names use the three-letter airport codes, separated by commas, only available in HTTPing mode; (default all regions)
 
     -tl 200
-        平均延迟上限；只输出低于指定平均延迟的 IP，各上下限条件可搭配使用；(默认 9999 ms)
+        Average latency upper limit; only output IPs with average latency below the specified value. Conditions can be combined; (default 9999 ms)
     -tll 40
-        平均延迟下限；只输出高于指定平均延迟的 IP；(默认 0 ms)
+        Average latency lower limit; only output IPs with average latency above the specified value; (default 0 ms)
     -tlr 0.2
-        丢包几率上限；只输出低于/等于指定丢包率的 IP，范围 0.00~1.00，0 过滤掉任何丢包的 IP；(默认 1.00)
+        Packet loss rate upper limit; only output IPs with a loss rate equal to or below the specified value, range 0.00~1.00. 0 filters out any IPs with packet loss; (default 1.00)
     -sl 5
-        下载速度下限；只输出高于指定下载速度的 IP，凑够指定数量 [-dn] 才会停止测速；(默认 0.00 MB/s)
+        Download speed lower limit; only output IPs with download speed above the specified value. Testing stops once the specified number [-dn] is met; (default 0.00 MB/s)
 
     -p 10
-        显示结果数量；测速后直接显示指定数量的结果，为 0 时不显示结果直接退出；(默认 10 个)
+        Number of results to display; directly display the specified number of results after testing. Set to 0 to exit without displaying results; (default 10)
     -f ip.txt
-        IP段数据文件；如路径含有空格请加上引号；支持其他 CDN IP段；(默认 ip.txt)
+        IP range data file; add quotes if the path contains spaces; supports other CDN IP ranges; (default ip.txt)
     -ip 1.1.1.1,2.2.2.2/24,2606:4700::/32
-        指定IP段数据；直接通过参数指定要测速的 IP 段数据，英文逗号分隔；(默认 空)
+        Specify IP range data; directly specify IP range data for testing via parameters, separated by commas; (default empty)
     -o result.csv
-        写入结果文件；如路径含有空格请加上引号；值为空时不写入文件 [-o ""]；(默认 result.csv)
+        Write results to file; add quotes if the path contains spaces. Leave empty to avoid writing to file [-o ""]; (default result.csv)
 
     -dd
-        禁用下载测速；禁用后测速结果会按延迟排序 (默认按下载速度排序)；(默认 启用)
+        Disable download testing; results will be sorted by latency (default by download speed); (default enabled)
     -allip
-        测速全部的IP；对 IP 段中的每个 IP (仅支持 IPv4) 进行测速；(默认 每个 /24 段随机测速一个 IP)
+        Test all IPs; test every IP in the range (IPv4 only); (default randomly test one IP per /24 range)
 
     -v
-        打印程序版本 + 检查版本更新
+        Print program version + check for updates
     -h
-        打印帮助说明
+        Print help documentation
 `
 	var minDelay, maxDelay, downloadTime int
 	var maxLossRate float64
-	flag.IntVar(&task.Routines, "n", 200, "延迟测速线程")
-	flag.IntVar(&task.PingTimes, "t", 4, "延迟测速次数")
-	flag.IntVar(&task.TestCount, "dn", 10, "下载测速数量")
-	flag.IntVar(&downloadTime, "dt", 10, "下载测速时间")
-	flag.IntVar(&task.TCPPort, "tp", 443, "指定测速端口")
-	flag.StringVar(&task.URL, "url", "https://cf.xiu2.xyz/url", "指定测速地址")
+	flag.IntVar(&task.Routines, "n", 200, "Latency test threads")
+	flag.IntVar(&task.PingTimes, "t", 4, "Number of latency tests")
+	flag.IntVar(&task.TestCount, "dn", 10, "Number of download tests")
+	flag.IntVar(&downloadTime, "dt", 10, "Download test duration")
+	flag.IntVar(&task.TCPPort, "tp", 443, "Specify test port")
+	flag.StringVar(&task.URL, "url", "https://cf.xiu2.xyz/url", "Specify test URL")
 
-	flag.BoolVar(&task.Httping, "httping", false, "切换测速模式")
-	flag.IntVar(&task.HttpingStatusCode, "httping-code", 0, "有效状态代码")
-	flag.StringVar(&task.HttpingCFColo, "cfcolo", "", "匹配指定地区")
+	flag.BoolVar(&task.Httping, "httping", false, "Switch test mode")
+	flag.IntVar(&task.HttpingStatusCode, "httping-code", 0, "Valid status code")
+	flag.StringVar(&task.HttpingCFColo, "cfcolo", "", "Match specific regions")
 
-	flag.IntVar(&maxDelay, "tl", 9999, "平均延迟上限")
-	flag.IntVar(&minDelay, "tll", 0, "平均延迟下限")
-	flag.Float64Var(&maxLossRate, "tlr", 1, "丢包几率上限")
-	flag.Float64Var(&task.MinSpeed, "sl", 0, "下载速度下限")
+	flag.IntVar(&maxDelay, "tl", 9999, "Average latency upper limit")
+	flag.IntVar(&minDelay, "tll", 0, "Average latency lower limit")
+	flag.Float64Var(&maxLossRate, "tlr", 1, "Packet loss rate upper limit")
+	flag.Float64Var(&task.MinSpeed, "sl", 0, "Download speed lower limit")
 
-	flag.IntVar(&utils.PrintNum, "p", 10, "显示结果数量")
-	flag.StringVar(&task.IPFile, "f", "ip.txt", "IP段数据文件")
-	flag.StringVar(&task.IPText, "ip", "", "指定IP段数据")
-	flag.StringVar(&utils.Output, "o", "result.csv", "输出结果文件")
+	flag.IntVar(&utils.PrintNum, "p", 10, "Number of results to display")
+	flag.StringVar(&task.IPFile, "f", "ip.txt", "IP range data file")
+	flag.StringVar(&task.IPText, "ip", "", "Specify IP range data")
+	flag.StringVar(&utils.Output, "o", "result.csv", "Output results to file")
 
-	flag.BoolVar(&task.Disable, "dd", false, "禁用下载测速")
-	flag.BoolVar(&task.TestAll, "allip", false, "测速全部 IP")
+	flag.BoolVar(&task.Disable, "dd", false, "Disable download testing")
+	flag.BoolVar(&task.TestAll, "allip", false, "Test all IPs")
 
-	flag.BoolVar(&printVersion, "v", false, "打印程序版本")
+	flag.BoolVar(&printVersion, "v", false, "Print program version")
 	flag.Usage = func() { fmt.Print(help) }
 	flag.Parse()
 
 	if task.MinSpeed > 0 && time.Duration(maxDelay)*time.Millisecond == utils.InputMaxDelay {
-		fmt.Println("[小提示] 在使用 [-sl] 参数时，建议搭配 [-tl] 参数，以避免因凑不够 [-dn] 数量而一直测速...")
+		fmt.Println("[Tip] When using the [-sl] parameter, it's recommended to combine it with the [-tl] parameter to avoid continuous testing due to insufficient results for [-dn]...")
 	}
 	utils.InputMaxDelay = time.Duration(maxDelay) * time.Millisecond
 	utils.InputMinDelay = time.Duration(minDelay) * time.Millisecond
@@ -114,31 +114,31 @@ https://github.com/XIU2/CloudflareSpeedTest
 
 	if printVersion {
 		println(version)
-		fmt.Println("检查版本更新中...")
+		fmt.Println("Checking for updates...")
 		checkUpdate()
 		if versionNew != "" {
-			fmt.Printf("*** 发现新版本 [%s]！请前往 [https://github.com/XIU2/CloudflareSpeedTest] 更新！ ***", versionNew)
+			fmt.Printf("*** New version [%s] found! Please visit [https://github.com/XIU2/CloudflareSpeedTest] to update! ***", versionNew)
 		} else {
-			fmt.Println("当前为最新版本 [" + version + "]！")
+			fmt.Println("You're using the latest version [" + version + "]!")
 		}
 		os.Exit(0)
 	}
 }
 
 func main() {
-	task.InitRandSeed() // 置随机数种子
+	task.InitRandSeed() // Initialize random seed
 
 	fmt.Printf("# XIU2/CloudflareSpeedTest %s \n\n", version)
 
-	// 开始延迟测速 + 过滤延迟/丢包
+	// Start latency testing + filter by latency/packet loss
 	pingData := task.NewPing().Run().FilterDelay().FilterLossRate()
-	// 开始下载测速
+	// Start download testing
 	speedData := task.TestDownloadSpeed(pingData)
-	utils.ExportCsv(speedData) // 输出文件
-	speedData.Print()          // 打印结果
+	utils.ExportCsv(speedData) // Output results to file
+	speedData.Print()          // Print results
 
 	if versionNew != "" {
-		fmt.Printf("\n*** 发现新版本 [%s]！请前往 [https://github.com/XIU2/CloudflareSpeedTest] 更新！ ***\n", versionNew)
+		fmt.Printf("\n*** New version [%s] found! Please visit [https://github.com/XIU2/CloudflareSpeedTest] to update! ***\n", versionNew)
 	}
 	endPrint()
 }
@@ -147,13 +147,13 @@ func endPrint() {
 	if utils.NoPrintResult() {
 		return
 	}
-	if runtime.GOOS == "windows" { // 如果是 Windows 系统，则需要按下 回车键 或 Ctrl+C 退出（避免通过双击运行时，测速完毕后直接关闭）
-		fmt.Printf("按下 回车键 或 Ctrl+C 退出。")
+	if runtime.GOOS == "windows" { // If running on Windows, press Enter or Ctrl+C to exit (prevents auto-close when double-clicked)
+		fmt.Printf("Press Enter or Ctrl+C to exit.")
 		fmt.Scanln()
 	}
 }
 
-// 检查更新
+// Check for updates
 func checkUpdate() {
 	timeout := 10 * time.Second
 	client := http.Client{Timeout: timeout}
@@ -161,12 +161,12 @@ func checkUpdate() {
 	if err != nil {
 		return
 	}
-	// 读取资源数据 body: []byte
+	// Read response data body: []byte
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return
 	}
-	// 关闭资源流
+	// Close response body stream
 	defer res.Body.Close()
 	if string(body) != version {
 		versionNew = string(body)
